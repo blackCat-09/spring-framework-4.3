@@ -1424,14 +1424,18 @@ public class BeanDefinitionParserDelegate {
 	 * @param ele the element to parse
 	 * @param containingBd the containing bean definition (if any)
 	 * @return the resulting bean definition
+	 * 用来把XML 文档元素解析层 BeanDefinition 实例的类。是Bean 解析处理中非常重要的类
 	 */
 	public BeanDefinition parseCustomElement(Element ele, BeanDefinition containingBd) {
+		// 获取当前节点，NameSpaceURI 为解析特定标签做准备。
 		String namespaceUri = getNamespaceURI(ele);
+		// 先获取当前 XMLReaderContext 中的NamespaceHandlerResolver 也就是DefaultNameSpaceHandlerResolver 然后获取指定的NameSpaceHandler[resolve]
 		NamespaceHandler handler = this.readerContext.getNamespaceHandlerResolver().resolve(namespaceUri);
 		if (handler == null) {
 			error("Unable to locate Spring NamespaceHandler for XML schema namespace [" + namespaceUri + "]", ele);
 			return null;
 		}
+		// 使用NameSpaceHandler 解析标签,[parse](AbstractBeanDefinitionParser.parse())
 		return handler.parse(ele, new ParserContext(this.readerContext, this, containingBd));
 	}
 

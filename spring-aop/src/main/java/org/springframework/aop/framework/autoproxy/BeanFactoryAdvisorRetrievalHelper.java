@@ -64,10 +64,12 @@ public class BeanFactoryAdvisorRetrievalHelper {
 	 */
 	public List<Advisor> findAdvisorBeans() {
 		// Determine list of advisor bean names, if not cached already.
+		// double check 模式，即保证线程安全，又保证不用每次都加载，这种加载方式在spring 中常用
 		String[] advisorNames = this.cachedAdvisorBeanNames;
 		if (advisorNames == null) {
 			// Do not initialize FactoryBeans here: We need to leave all regular beans
 			// uninitialized to let the auto-proxy creator apply to them!
+			// 获取当前BeanFactroy 中的Advisor 的名称，包括父工厂的Advisor 即子工厂中合适的Bean 也有可能被当前工厂和Bean工厂的Advisor 拦截。
 			advisorNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 					this.beanFactory, Advisor.class, true, false);
 			this.cachedAdvisorBeanNames = advisorNames;
@@ -78,6 +80,10 @@ public class BeanFactoryAdvisorRetrievalHelper {
 
 		List<Advisor> advisors = new ArrayList<Advisor>();
 		for (String name : advisorNames) {
+			/**
+			 * 选取合适的Advisor Bean 使用 AutoProxyCreator 进行通用性处理，保证了AutoProxyCreator 子类的灵活性，
+			 * [isEligibleBean]
+			 */
 			if (isEligibleBean(name)) {
 				if (this.beanFactory.isCurrentlyInCreation(name)) {
 					if (logger.isDebugEnabled()) {
@@ -115,6 +121,7 @@ public class BeanFactoryAdvisorRetrievalHelper {
 	 * <p>The default implementation always returns {@code true}.
 	 * @param beanName the name of the aspect bean
 	 * @return whether the bean is eligible
+	 * AbstractAdvisorAutoProxyCreator.isEligibleBean 方法
 	 */
 	protected boolean isEligibleBean(String beanName) {
 		return true;

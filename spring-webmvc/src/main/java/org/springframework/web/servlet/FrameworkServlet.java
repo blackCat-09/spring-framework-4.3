@@ -491,6 +491,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		long startTime = System.currentTimeMillis();
 
 		try {
+			// 创建SpringWeb 容器
 			this.webApplicationContext = initWebApplicationContext();
 			initFrameworkServlet();
 		}
@@ -520,6 +521,9 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 	 * @see #setContextConfigLocation
 	 */
 	protected WebApplicationContext initWebApplicationContext() {
+		/*
+		 * 从Servlet 上下文属性中获取Listener 中的容器。
+		 */
 		WebApplicationContext rootContext =
 				WebApplicationContextUtils.getWebApplicationContext(getServletContext());
 		WebApplicationContext wac = null;
@@ -532,6 +536,10 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 				if (!cwac.isActive()) {
 					// The context has not yet been refreshed -> provide services such as
 					// setting the parent context, setting the application context id, etc
+					/*
+					 * 如果父容器是一个Web 容器并且没有启动，则此时运行当前容器并且设置它的父容器，也就是说在XML 中配置的两个SpringServlet
+					 * 仍然可以互相引用Bean。
+					 */
 					if (cwac.getParent() == null) {
 						// The context instance was injected without an explicit parent -> set
 						// the root application context (if any; may be null) as the parent
@@ -550,6 +558,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 		}
 		if (wac == null) {
 			// No context instance is defined for this servlet -> create a local one
+			// 创建当前Servlet 创建的Web 容器，并且把父容器设置在其中。
 			wac = createWebApplicationContext(rootContext);
 		}
 
@@ -557,6 +566,7 @@ public abstract class FrameworkServlet extends HttpServletBean implements Applic
 			// Either the context is not a ConfigurableApplicationContext with refresh
 			// support or the context injected at construction time had already been
 			// refreshed -> trigger initial onRefresh manually here.
+			// 实例化的当前容器
 			onRefresh(wac);
 		}
 

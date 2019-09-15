@@ -158,10 +158,12 @@ class CglibAopProxy implements AopProxy, Serializable {
 		}
 
 		try {
+			// 获取Advised 的目标类
 			Class<?> rootClass = this.advised.getTargetClass();
 			Assert.state(rootClass != null, "Target class must be available for creating a CGLIB proxy");
 
 			Class<?> proxySuperClass = rootClass;
+			// 如果这个目标类是 CGLIB 代理生成的，则获取其父类，并且把当前类实现的接口添加到 Advisor 配置信息中
 			if (ClassUtils.isCglibProxyClass(rootClass)) {
 				proxySuperClass = rootClass.getSuperclass();
 				Class<?>[] additionalInterfaces = rootClass.getInterfaces();
@@ -171,22 +173,28 @@ class CglibAopProxy implements AopProxy, Serializable {
 			}
 
 			// Validate the class, writing log messages as necessary.
+			// 验证父类
 			validateClassIfNecessary(proxySuperClass, classLoader);
 
 			// Configure CGLIB Enhancer...
+			// 创建一个CGLIB，enhancer 它是使用ASM 字节码技术生成对象实例，每一个CGLIB 代理生成的对象实例都是 enhancer 类的子类。
 			Enhancer enhancer = createEnhancer();
 			if (classLoader != null) {
+				// 设置当前类加载器
 				enhancer.setClassLoader(classLoader);
 				if (classLoader instanceof SmartClassLoader &&
 						((SmartClassLoader) classLoader).isClassReloadable(proxySuperClass)) {
+					// 设置不使用缓存
 					enhancer.setUseCache(false);
 				}
 			}
+			// 把目标父类，设置为这个代理类的父类
 			enhancer.setSuperclass(proxySuperClass);
+			// 获取Advised 配置信息中需要被代理的接口，并且将这些接口设置到新CGLIB 代理实例中
 			enhancer.setInterfaces(AopProxyUtils.completeProxiedInterfaces(this.advised));
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
 			enhancer.setStrategy(new ClassLoaderAwareUndeclaredThrowableStrategy(classLoader));
-
+			// 设置callback 相当于JDK动态代理中，InvocationHandler 是真正执行拦截处理的回调函数。
 			Callback[] callbacks = getCallbacks(rootClass);
 			Class<?>[] types = new Class<?>[callbacks.length];
 			for (int x = 0; x < types.length; x++) {
@@ -198,6 +206,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			enhancer.setCallbackTypes(types);
 
 			// Generate the proxy class and create a proxy instance.
+			// 使用生产enhancer 实例生产代理类的class，并且代理类的class 并且实例化当前class，返回当前新实例的对象。
 			return createProxyClassAndInstance(enhancer, callbacks);
 		}
 		catch (CodeGenerationException ex) {

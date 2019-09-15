@@ -283,13 +283,14 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				retVal = invocation.proceedWithInvocation();
 			}
 			catch (Throwable ex) {
-				// target invocation exception
+				// target invocation exception [completeTransactionAfterThrowing]
 				completeTransactionAfterThrowing(txInfo, ex);
 				throw ex;
 			}
 			finally {
 				cleanupTransactionInfo(txInfo);
 			}
+			// 如果没有发生异常，则将事务提交[commitTransactionAfterReturning]
 			commitTransactionAfterReturning(txInfo);
 			return retVal;
 		}
@@ -442,6 +443,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	 * The {@code hasTransaction()} method on TransactionInfo can be used to
 	 * tell if there was a transaction created.
 	 * @see #getTransactionAttributeSource()
+	 * 事务是如何获取
 	 */
 	@SuppressWarnings("serial")
 	protected TransactionInfo createTransactionIfNecessary(
@@ -460,6 +462,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		TransactionStatus status = null;
 		if (txAttr != null) {
 			if (tm != null) {
+				// 通过属性获取当前事务的状态  [getTransaction](AbstractPlatformTransactionManager)
 				status = tm.getTransaction(txAttr);
 			}
 			else {
@@ -469,6 +472,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				}
 			}
 		}
+		// 构建 TransactionInfo 对象 [prepareTransactionInfo]
 		return prepareTransactionInfo(tm, txAttr, joinpointIdentification, status);
 	}
 
@@ -490,6 +494,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 				logger.trace("Getting transaction for [" + txInfo.getJoinpointIdentification() + "]");
 			}
 			// The transaction manager will flag an error if an incompatible tx already exists.
+			// 设置获取事务状态
 			txInfo.newTransactionStatus(status);
 		}
 		else {
@@ -504,6 +509,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		// We always bind the TransactionInfo to the thread, even if we didn't create
 		// a new transaction here. This guarantees that the TransactionInfo stack
 		// will be managed correctly even if no transaction was created by this aspect.
+		// 把当前TransactionInfo 放入ThreadLocal 中
 		txInfo.bindToThread();
 		return txInfo;
 	}
@@ -512,6 +518,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 	 * Execute after successful completion of call, but not after an exception was handled.
 	 * Do nothing if we didn't create a transaction.
 	 * @param txInfo information about the current transaction
+	 *               如果没有发生异常，则将事务提交
 	 */
 	protected void commitTransactionAfterReturning(TransactionInfo txInfo) {
 		if (txInfo != null && txInfo.hasTransaction()) {
@@ -535,7 +542,9 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 						"] after exception: " + ex);
 			}
 			if (txInfo.transactionAttribute.rollbackOn(ex)) {
+				// 如果在当前事务信息中配置回滚异常和当前抛出的异常
 				try {
+					// 则调用事务管理器进行回滚，下面详细讲解处理回滚时的核心逻辑
 					txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
 				}
 				catch (TransactionSystemException ex2) {
@@ -555,6 +564,9 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 			else {
 				// We don't roll back on this exception.
 				// Will still roll back if TransactionStatus.isRollbackOnly() is true.
+				/**
+				 * 如果不关心当前抛出的异常，则直接调用  commit （但并不是真正的 commit 数据库事务, 只是触发事务管理器的 commit 方法）
+				 */
 				try {
 					txInfo.getTransactionManager().commit(txInfo.getTransactionStatus());
 				}

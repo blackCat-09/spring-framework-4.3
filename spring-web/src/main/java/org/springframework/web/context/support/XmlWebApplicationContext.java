@@ -76,10 +76,12 @@ public class XmlWebApplicationContext extends AbstractRefreshableWebApplicationC
 	 * @see org.springframework.beans.factory.xml.XmlBeanDefinitionReader
 	 * @see #initBeanDefinitionReader
 	 * @see #loadBeanDefinitions
+	 * XML 文件的加载
 	 */
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
 		// Create a new XmlBeanDefinitionReader for the given BeanFactory.
+		// 创建一个读取XML 文件的实例对象、并将读取到的Bean 描述信息加载到BeanFactory 中
 		XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
 
 		// Configure the bean definition reader with this context's
@@ -90,7 +92,9 @@ public class XmlWebApplicationContext extends AbstractRefreshableWebApplicationC
 
 		// Allow a subclass to provide custom initialization of the reader,
 		// then proceed with actually loading the bean definitions.
+		// 使用当前read 读取指定的XML 文件中的Bean 描述信息到工厂中。
 		initBeanDefinitionReader(beanDefinitionReader);
+		// [loadBeanDefinitions]
 		loadBeanDefinitions(beanDefinitionReader);
 	}
 
@@ -119,6 +123,7 @@ public class XmlWebApplicationContext extends AbstractRefreshableWebApplicationC
 	 * @see #getResourcePatternResolver
 	 */
 	protected void loadBeanDefinitions(XmlBeanDefinitionReader reader) throws IOException {
+		// 获取指定的XML 文件的配置地址，读取文件
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
 			for (String configLocation : configLocations) {

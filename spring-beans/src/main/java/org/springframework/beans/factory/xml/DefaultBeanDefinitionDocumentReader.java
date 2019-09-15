@@ -91,6 +91,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		this.readerContext = readerContext;
 		logger.debug("Loading bean definitions");
 		Element root = doc.getDocumentElement();
+		// [doRegisterBeanDefinitions]
 		doRegisterBeanDefinitions(root);
 	}
 
@@ -139,6 +140,7 @@ public class DefaultBeanDefinitionDocumentReader implements BeanDefinitionDocume
 		}
 
 		preProcessXml(root);
+		// [parseBeanDefinitions]
 		parseBeanDefinitions(root, this.delegate);
 		postProcessXml(root);
 

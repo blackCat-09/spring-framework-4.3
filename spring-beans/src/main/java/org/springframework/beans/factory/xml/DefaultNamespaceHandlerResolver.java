@@ -86,6 +86,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 	 * @see #DEFAULT_HANDLER_MAPPINGS_LOCATION
 	 */
 	public DefaultNamespaceHandlerResolver(ClassLoader classLoader) {
+		// 默认使用META-INF/spring.handlers 文件，当然也支持用户自定义文件（META-INF/spring_ext.handlers）
 		this(classLoader, DEFAULT_HANDLER_MAPPINGS_LOCATION);
 	}
 
@@ -111,6 +112,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 	 */
 	@Override
 	public NamespaceHandler resolve(String namespaceUri) {
+		// 获取META-INF/spring.handlers 配置文件中的值，并将其放在map中[getHandlerMappings]
 		Map<String, Object> handlerMappings = getHandlerMappings();
 		Object handlerOrClassName = handlerMappings.get(namespaceUri);
 		if (handlerOrClassName == null) {
@@ -128,6 +130,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 							"] does not implement the [" + NamespaceHandler.class.getName() + "] interface");
 				}
 				NamespaceHandler namespaceHandler = (NamespaceHandler) BeanUtils.instantiateClass(handlerClass);
+				// 实例化自定义Handler ，并且调用init 方法。
 				namespaceHandler.init();
 				handlerMappings.put(namespaceUri, namespaceHandler);
 				return namespaceHandler;
@@ -156,6 +159,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 						logger.debug("Loading NamespaceHandler mappings from [" + this.handlerMappingsLocation + "]");
 					}
 					try {
+						// 从META-INF/spring.hadlers 中读取属性信息，也就是为什么我们在自定义标签是要这个文件中添加 NameSpaceHandler 的className
 						Properties mappings =
 								PropertiesLoaderUtils.loadAllProperties(this.handlerMappingsLocation, this.classLoader);
 						if (logger.isDebugEnabled()) {

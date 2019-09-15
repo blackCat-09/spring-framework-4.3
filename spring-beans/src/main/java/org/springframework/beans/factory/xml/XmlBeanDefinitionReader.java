@@ -389,6 +389,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 		try {
 			Document doc = doLoadDocument(inputSource, resource);
+			// [registerBeanDefinitions]
 			return registerBeanDefinitions(doc, resource);
 		}
 		catch (BeanDefinitionStoreException ex) {
@@ -503,9 +504,17 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		// 实例化，BeanDefinitionDocumentReader
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+		// 获取当前Bean 注册器中已注册Bean 的数量。
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		/*
+		 * 使用 documentReader 注册当前文档中的Bean
+		 * registerBeanDefinitions 注册Bean（最终调用 AbstractBeanDefinitionParser.parse() 构建BeanDefinition）
+		 * [createReaderContext] 解析Bean
+		 */
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+		// 计算数量
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
 
@@ -523,6 +532,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * Create the {@link XmlReaderContext} to pass over to the document reader.
 	 */
 	public XmlReaderContext createReaderContext(Resource resource) {
+		//[getNamespaceHandlerResolver]
 		return new XmlReaderContext(resource, this.problemReporter, this.eventListener,
 				this.sourceExtractor, this, getNamespaceHandlerResolver());
 	}
@@ -531,6 +541,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * Lazily create a default NamespaceHandlerResolver, if not set before.
 	 * @see #createDefaultNamespaceHandlerResolver()
 	 */
+	// 使用 DefaultNamespaceHandlerResolver 来获得 Namespacehandler.
 	public NamespaceHandlerResolver getNamespaceHandlerResolver() {
 		if (this.namespaceHandlerResolver == null) {
 			this.namespaceHandlerResolver = createDefaultNamespaceHandlerResolver();

@@ -506,42 +506,72 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		// 使用互斥锁，防止启动、关闭及注册回调函数的重复调用，保证上下文的对象状态
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
+			// 准确启动前参数
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			/*
+			 * 调用创建子类的创建工厂方法和刷新工厂方法
+			 * 上面提到父子容器就用了。它的子类 abstractRefreshableApplicationContext 来创建
+			 * beanFactory.xml 配置文件的读取也就是在此加载的
+			 * [obtainFreshBeanFactory]
+			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			// 初始化和设置BeanFactory 的初始化参数
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				/**
+				 * 调用BeanFactory 的实例化后置处理器
+				 * SpringBoot 的核心上下文实现类 “AnnotationConfigEmbeddedWebApplicationContext”
+				 * 通过重写 postProcessBeanFactory 方法来实现在Spring Boot 场景下对Bean 配置的加载
+				 *
+				 * 1、Spring 使用 AbstractRefreshableWebApplicationContext
+				 * [重点后置处理器]
+				 */
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
+				/**
+				 * 最终使用 ConfigurationClassPostProcessor 主要处理Bean 描述信息实体的排序，以及configuration Bean 的解析和读取。
+				 * [invokeBeanFactoryPostProcessors]
+ 				 */
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
+				// 在Bean 工厂中注册Bean 的后置处理器（BeanPostProcessor）Bean 的代理的生成由它来实现
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
+				// 初始化消息源，并设置父消息源来自父容器的配置
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// 初始化消息推送器，注册一个默认的单例Bean，SimpleApplicationEventMulticaster
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				/**
+				 * 调用子类重写方法，由子类实现的扩展，SpringBoot 核心基类 EmbeddedWebApplicationContext 就是用这个方法来初始容器
+				 */
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 注册listeners
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				// 把所有非延迟加载的Bean，初始化并设置冻结标志，防止重新实例化Bean 浪费资源
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
+				// 注册、启动 LifecycleProcessor 并且发送启动完成事件。
 				finishRefresh();
 			}
 
@@ -552,9 +582,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				}
 
 				// Destroy already created singletons to avoid dangling resources.
+				/// 销毁已经存在的Bean
 				destroyBeans();
 
 				// Reset 'active' flag.
+				// 释放标志位，标识其可以重新启动
 				cancelRefresh(ex);
 
 				// Propagate exception to caller.
@@ -564,6 +596,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			finally {
 				// Reset common introspection caches in Spring's core, since we
 				// might not ever need metadata for singleton beans anymore...
+				/*
+				 * 清除与反射相关的缓存，例如反射的方法、字段、类型解析及类加载
+				 * Spring 框架对于 Java 反射技术的使用特别多，特别是IOC 部分，但是能保证对性能、内存的管理，以及对软引用，弱引用的使用。
+				 */
 				resetCommonCaches();
 			}
 		}
@@ -611,6 +647,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #getBeanFactory()
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+		// SpringWeb 核心基类，刷新BeanFactory (AbstractRefreshableApplicationContext)
+		// [refreshBeanFactory]
 		refreshBeanFactory();
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 		if (logger.isDebugEnabled()) {
@@ -674,6 +712,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * will have been instantiated yet. This allows for registering special
 	 * BeanPostProcessors etc in certain ApplicationContext implementations.
 	 * @param beanFactory the bean factory used by the application context
+	 *                    在当前Bean 工厂中添加Bean 后置处理器
 	 */
 	protected void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 	}
@@ -684,6 +723,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Must be called before singleton instantiation.
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
+		// [invokeBeanFactoryPostProcessors]
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found in the meantime

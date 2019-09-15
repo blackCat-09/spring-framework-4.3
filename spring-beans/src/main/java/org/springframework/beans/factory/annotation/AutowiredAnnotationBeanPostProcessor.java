@@ -235,11 +235,15 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 	}
 
+	/**
+	 * 该方法主要用于在实例化Bean 并且在Bean 的构造方法上有 @Autowired 注解是选择合适的构造方法
+	 */
 	@Override
 	public Constructor<?>[] determineCandidateConstructors(Class<?> beanClass, final String beanName)
 			throws BeanCreationException {
 
 		// Let's check for lookup methods here..
+		// 寻找当前类中（包含父类）含有 lookup 注解方法并为其添加重写方法，在每次调用方法是实际调用在 lookup 注解中配置的方法，为此实现方法的灵活定制。
 		if (!this.lookupMethodsChecked.contains(beanName)) {
 			try {
 				ReflectionUtils.doWithMethods(beanClass, new ReflectionUtils.MethodCallback() {
@@ -271,12 +275,15 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		}
 
 		// Quick check on the concurrent map first, with minimal locking.
+		// 先判断缓存中是否存在当前构造方法数组
 		Constructor<?>[] candidateConstructors = this.candidateConstructorsCache.get(beanClass);
+		// 在保证缓存和处理器的一致性使用锁，虽然缓存使用线程安全HashMap 但是为了保证处理逻辑和设置缓存的一致性。使用内置锁
 		if (candidateConstructors == null) {
 			// Fully synchronized resolution now...
 			synchronized (this.candidateConstructorsCache) {
 				candidateConstructors = this.candidateConstructorsCache.get(beanClass);
 				if (candidateConstructors == null) {
+					// 获取当前 class 的所有构造方法
 					Constructor<?>[] rawCandidates;
 					try {
 						rawCandidates = beanClass.getDeclaredConstructors();
@@ -290,7 +297,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 					Constructor<?> requiredConstructor = null;
 					Constructor<?> defaultConstructor = null;
 					for (Constructor<?> candidate : rawCandidates) {
+						// 获取当前构造方法的主机属于@autowrite, @value
 						AnnotationAttributes ann = findAutowiredAnnotation(candidate);
+						// 如果这个构造方法不存在主机属性。则使用这个构造方法的参数类型父类中寻找
 						if (ann == null) {
 							Class<?> userClass = ClassUtils.getUserClass(beanClass);
 							if (userClass != beanClass) {
@@ -321,14 +330,21 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 								}
 								requiredConstructor = candidate;
 							}
+							/**
+							 * 若找到注解，并且发现现有的构造方法已经有注解，则会报错。
+							 * 也就是说只能在一个构造方法上有注解，包括父类构造方法。
+							 * 判断是否强制依赖注入，如果 required=false, 则有多个@autowire 在构造方法上不报错，主要针对前两个，1是无参、1个是多个构造方法有@autowite
+							 */
 							candidates.add(candidate);
 						}
 						else if (candidate.getParameterTypes().length == 0) {
+							// 如果没有注解、则直接选择一个默认的构造方法，因为调用方的目的是实例化class。
 							defaultConstructor = candidate;
 						}
 					}
 					if (!candidates.isEmpty()) {
 						// Add default constructor to list of optional constructors, as fallback.
+						// 如果找到合适的构造方法，但是这个构造方法不是 require=true, 强依赖，就采用默认的构造方法
 						if (requiredConstructor == null) {
 							if (defaultConstructor != null) {
 								candidates.add(defaultConstructor);
@@ -342,12 +358,14 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
 						candidateConstructors = candidates.toArray(new Constructor<?>[candidates.size()]);
 					}
+					// 如果没找到含有注解的构造方法，但是这个类只定义一个有参构造方法，则默认使用当前构造方法
 					else if (rawCandidates.length == 1 && rawCandidates[0].getParameterTypes().length > 0) {
 						candidateConstructors = new Constructor<?>[] {rawCandidates[0]};
 					}
 					else {
 						candidateConstructors = new Constructor<?>[0];
 					}
+					// 设置缓存
 					this.candidateConstructorsCache.put(beanClass, candidateConstructors);
 				}
 			}
@@ -355,18 +373,24 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		return (candidateConstructors.length > 0 ? candidateConstructors : null);
 	}
 
+	/**
+	 * Spring 注入分为构造方法、方法、参数、属性和主机类型。
+	 * AutowiredAnnotationBeanPostProcessor 的注入方法
+	 */
 	@Override
 	public PropertyValues postProcessPropertyValues(
 			PropertyValues pvs, PropertyDescriptor[] pds, Object bean, String beanName) throws BeanCreationException {
-
+		// 获取自动注入的元数据[findAutowiringMetadata]
 		InjectionMetadata metadata = findAutowiringMetadata(beanName, bean.getClass(), pvs);
 		try {
+			// 获取当前属性的元数据实体并注入目标属性中[inject] ~使用反射技术
 			metadata.inject(bean, beanName, pvs);
 		}
 		catch (BeanCreationException ex) {
 			throw ex;
 		}
 		catch (Throwable ex) {
+			// 如果属性注入发生异常，例如类型不匹配或者类型转换错误，则转换成
 			throw new BeanCreationException(beanName, "Injection of autowired dependencies failed", ex);
 		}
 		return pvs;
@@ -396,17 +420,23 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 	private InjectionMetadata findAutowiringMetadata(String beanName, Class<?> clazz, PropertyValues pvs) {
 		// Fall back to class name as cache key, for backwards compatibility with custom callers.
+		// 优先使用Bean 名称进行缓存，如果Bean 名称为空，则使用类名进行缓存
 		String cacheKey = (StringUtils.hasLength(beanName) ? beanName : clazz.getName());
 		// Quick check on the concurrent map first, with minimal locking.
+		// 先去缓存中查找
 		InjectionMetadata metadata = this.injectionMetadataCache.get(cacheKey);
+		// 如果缓存中没有并且class 不为空
 		if (InjectionMetadata.needsRefresh(metadata, clazz)) {
 			synchronized (this.injectionMetadataCache) {
+				// 则使用 double check 的方式来保证性能和线程安全
 				metadata = this.injectionMetadataCache.get(cacheKey);
 				if (InjectionMetadata.needsRefresh(metadata, clazz)) {
+					// 保护性操作，先清除原来的属性
 					if (metadata != null) {
 						metadata.clear(pvs);
 					}
 					try {
+						// 构建自动注入元数据，获取数据和方法中value 和 autowired 注解的元素来构建数据元实体
 						metadata = buildAutowiringMetadata(clazz);
 						this.injectionMetadataCache.put(cacheKey, metadata);
 					}
@@ -632,6 +662,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 		@Override
 		protected void inject(Object bean, String beanName, PropertyValues pvs) throws Throwable {
+			// 检测是否可以跳过的当前属性
 			if (checkPropertySkipping(pvs)) {
 				return;
 			}

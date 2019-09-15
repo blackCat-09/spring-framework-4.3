@@ -76,6 +76,9 @@ public class InjectionMetadata {
 		this.checkedElements = checkedElements;
 	}
 
+	/**
+	 * 注入的核心原理就是使用Java 反射技术来实现属性赋值
+	 */
 	public void inject(Object target, String beanName, PropertyValues pvs) throws Throwable {
 		Collection<InjectedElement> elementsToIterate =
 				(this.checkedElements != null ? this.checkedElements : this.injectedElements);
@@ -84,6 +87,7 @@ public class InjectionMetadata {
 				if (logger.isDebugEnabled()) {
 					logger.debug("Processing injected element of bean '" + beanName + "': " + element);
 				}
+				// [inject]
 				element.inject(target, beanName, pvs);
 			}
 		}
@@ -189,6 +193,7 @@ public class InjectionMetadata {
 		 * Check whether this injector's property needs to be skipped due to
 		 * an explicit property value having been specified. Also marks the
 		 * affected property as processed for other processors to ignore it.
+		 * 检测是否可以跳过当前属性
 		 */
 		protected boolean checkPropertySkipping(PropertyValues pvs) {
 			if (this.skip != null) {

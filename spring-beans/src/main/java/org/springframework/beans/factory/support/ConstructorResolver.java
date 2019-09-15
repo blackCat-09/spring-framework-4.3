@@ -98,10 +98,11 @@ class ConstructorResolver {
 	 * @param explicitArgs argument values passed in programmatically via the getBean method,
 	 * or {@code null} if none (-> use constructor argument values from bean definition)
 	 * @return a BeanWrapper for the new instance
+	 * 构造方法的解析和装配。
 	 */
 	public BeanWrapper autowireConstructor(final String beanName, final RootBeanDefinition mbd,
 			Constructor<?>[] chosenCtors, final Object[] explicitArgs) {
-
+		// 为当前beanWrapperImpl 设置类型解析器
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
 
@@ -118,19 +119,23 @@ class ConstructorResolver {
 				constructorToUse = (Constructor<?>) mbd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse != null && mbd.constructorArgumentsResolved) {
 					// Found a cached constructor...
+					// 获取构造方法的参数已经被解析的对象
 					argsToUse = mbd.resolvedConstructorArguments;
 					if (argsToUse == null) {
 						argsToResolve = mbd.preparedConstructorArguments;
 					}
 				}
 			}
+			// 如果有参数需要被解析
 			if (argsToResolve != null) {
 				argsToUse = resolvePreparedArguments(beanName, mbd, bw, constructorToUse, argsToResolve);
 			}
 		}
 
+		// 如果构造方法没有被解析过
 		if (constructorToUse == null) {
 			// Need to resolve the constructor.
+			// 则获取构造方法自动注入标识
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == RootBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 			ConstructorArgumentValues resolvedValues = null;
@@ -140,14 +145,18 @@ class ConstructorResolver {
 				minNrOfArgs = explicitArgs.length;
 			}
 			else {
+				// 如果入参为空，则在bean 的描述信息中获取构造函数的参数个数。
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
 				resolvedValues = new ConstructorArgumentValues();
 				minNrOfArgs = resolveConstructorArguments(beanName, mbd, bw, cargs, resolvedValues);
 			}
 
 			// Take specified constructors, if any.
+			// 解析构造方法的参数
 			Constructor<?>[] candidates = chosenCtors;
+			// 如果没有找到，则在bean 的class 中获取构造函数
 			if (candidates == null) {
+				// 按照bean 描述配置class 及访问限制配置获取构造方法数组
 				Class<?> beanClass = mbd.getBeanClass();
 				try {
 					candidates = (mbd.isNonPublicAccessAllowed() ?
@@ -170,6 +179,10 @@ class ConstructorResolver {
 				if (constructorToUse != null && argsToUse.length > paramTypes.length) {
 					// Already found greedy constructor that can be satisfied ->
 					// do not look any further, there are only less greedy constructors left.
+					/**
+					 * 如果已存在参数数量多于参数类型的数组，则跳出循环，如果当前构造函数的参数数量少于需要的参数数量。则说明构造函数不符合
+					 * 要求，继续匹配下一个构造函数。
+					 */
 					break;
 				}
 				if (paramTypes.length < minNrOfArgs) {
@@ -186,6 +199,7 @@ class ConstructorResolver {
 								paramNames = pnd.getParameterNames(candidate);
 							}
 						}
+						// 创建构造方法所需要的参数值，用过类型转换器解析和转换参数值。并且把自动注入的bean注册到bean工厂
 						argsHolder = createArgumentArray(beanName, mbd, resolvedValues, bw, paramTypes, paramNames,
 								getUserDeclaredConstructor(candidate), autowiring);
 					}
@@ -204,6 +218,7 @@ class ConstructorResolver {
 				}
 				else {
 					// Explicit arguments given -> arguments length must match exactly.
+					// java 的一个类中不能同时存在两个参数类型和个数相同的构造函数
 					if (paramTypes.length != explicitArgs.length) {
 						continue;
 					}
@@ -213,6 +228,7 @@ class ConstructorResolver {
 				int typeDiffWeight = (mbd.isLenientConstructorResolution() ?
 						argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
 				// Choose this constructor if it represents the closest match.
+				// 按匹配项获取构造函数
 				if (typeDiffWeight < minTypeDiffWeight) {
 					constructorToUse = candidate;
 					argsHolderToUse = argsHolder;
@@ -228,7 +244,7 @@ class ConstructorResolver {
 					ambiguousConstructors.add(candidate);
 				}
 			}
-
+			// spring 的异常描述非常清晰，所以为了便于解决问题，
 			if (constructorToUse == null) {
 				if (causes != null) {
 					UnsatisfiedDependencyException ex = causes.removeLast();
@@ -249,6 +265,7 @@ class ConstructorResolver {
 			}
 
 			if (explicitArgs == null) {
+				// 如果入参为空，则此时存储标志位，防止重复解析，这部分和 createInstance 中判断是相互呼应的
 				argsHolderToUse.storeCache(mbd, constructorToUse);
 			}
 		}

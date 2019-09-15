@@ -57,6 +57,7 @@ public abstract class AopConfigUtils {
 
 	static {
 		// Set up the escalation list...
+		// 从List 的顺序可以看出Bean 的索引值的顺序
 		APC_PRIORITY_LIST.add(InfrastructureAdvisorAutoProxyCreator.class);
 		APC_PRIORITY_LIST.add(AspectJAwareAdvisorAutoProxyCreator.class);
 		APC_PRIORITY_LIST.add(AnnotationAwareAspectJAutoProxyCreator.class);
@@ -104,7 +105,10 @@ public abstract class AopConfigUtils {
 
 	private static BeanDefinition registerOrEscalateApcAsRequired(Class<?> cls, BeanDefinitionRegistry registry, Object source) {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
-
+		/**
+		 * org.springframework.aop.config.internalAutoProxyCreator
+		 * 如果这个BeanFactory 中已经存在 org.springframework.aop.config.internalAutoProxyCreator 的Bean，则不再创建
+		 */
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {

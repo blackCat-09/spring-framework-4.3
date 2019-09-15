@@ -104,6 +104,7 @@ public class ProxyFactory extends ProxyCreatorSupport {
 	 * @param classLoader the class loader to create the proxy with
 	 * (or {@code null} for the low-level proxy facility's default)
 	 * @return the proxy object
+	 * 调用父类ProxyCreatorSupport 来创建AOP 代理，然后获取代理实例。
 	 */
 	public Object getProxy(ClassLoader classLoader) {
 		return createAopProxy().getProxy(classLoader);

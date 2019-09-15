@@ -64,9 +64,12 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 		this.advisorRetrievalHelper = new BeanFactoryAdvisorRetrievalHelperAdapter(beanFactory);
 	}
 
-
+	/**
+	 * 看当前Bean 的拦截器是怎么获取的
+	 */
 	@Override
 	protected Object[] getAdvicesAndAdvisorsForBean(Class<?> beanClass, String beanName, TargetSource targetSource) {
+		// 获取当前bean 匹配的 Advisor [findEligibleAdvisors]
 		List<Advisor> advisors = findEligibleAdvisors(beanClass, beanName);
 		if (advisors.isEmpty()) {
 			return DO_NOT_PROXY;
@@ -85,8 +88,11 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @see #extendAdvisors
 	 */
 	protected List<Advisor> findEligibleAdvisors(Class<?> beanClass, String beanName) {
+		// 获取可用的 Advisors[findCandidateAdvisors] (BeanFactoryAdvisorRetrievalHelper.findAdvisorBeans)
 		List<Advisor> candidateAdvisors = findCandidateAdvisors();
+		// 获取匹配当前Bean 的所有Advisor [findAdvisorsThatCanApply]
 		List<Advisor> eligibleAdvisors = findAdvisorsThatCanApply(candidateAdvisors, beanClass, beanName);
+		// 获取子类中扩展的Advisor 并且排序
 		extendAdvisors(eligibleAdvisors);
 		if (!eligibleAdvisors.isEmpty()) {
 			eligibleAdvisors = sortAdvisors(eligibleAdvisors);
@@ -99,6 +105,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @return the List of candidate Advisors
 	 */
 	protected List<Advisor> findCandidateAdvisors() {
+		// [findAdvisorBeans]
 		return this.advisorRetrievalHelper.findAdvisorBeans();
 	}
 
@@ -110,15 +117,18 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 	 * @param beanName the target's bean name
 	 * @return the List of applicable Advisors
 	 * @see ProxyCreationContext#getCurrentProxiedBeanName()
+	 * 获取到集合中继续查找符合当前Bean，的Advisor 集合
 	 */
 	protected List<Advisor> findAdvisorsThatCanApply(
 			List<Advisor> candidateAdvisors, Class<?> beanClass, String beanName) {
-
+		// 设置当前线程级别的标志位
 		ProxyCreationContext.setCurrentProxiedBeanName(beanName);
 		try {
+			// 从大体合适的 Advisor 中找到真正合适的 Advisor [findAdvisorsThatCanApply]
 			return AopUtils.findAdvisorsThatCanApply(candidateAdvisors, beanClass);
 		}
 		finally {
+			// 清空线程标志
 			ProxyCreationContext.setCurrentProxiedBeanName(null);
 		}
 	}
@@ -180,6 +190,7 @@ public abstract class AbstractAdvisorAutoProxyCreator extends AbstractAutoProxyC
 
 		@Override
 		protected boolean isEligibleBean(String beanName) {
+			// 这个类是一个内部类，它调用外部类的子类的 isEligibleAdvisorBean 方法。
 			return AbstractAdvisorAutoProxyCreator.this.isEligibleAdvisorBean(beanName);
 		}
 	}

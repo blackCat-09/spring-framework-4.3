@@ -48,15 +48,18 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 
 	@Override
 	public AopProxy createAopProxy(AdvisedSupport config) throws AopConfigException {
+		// 检测配置，判断是否是代理类或者接口
 		if (config.isOptimize() || config.isProxyTargetClass() || hasNoUserSuppliedProxyInterfaces(config)) {
 			Class<?> targetClass = config.getTargetClass();
 			if (targetClass == null) {
 				throw new AopConfigException("TargetSource cannot determine target class: " +
 						"Either an interface or a target is required for proxy creation.");
 			}
+			// 如果是接口或者当前目标类就是JDK 动态代理的类，则使用JDK 动态代理实例。
 			if (targetClass.isInterface() || Proxy.isProxyClass(targetClass)) {
 				return new JdkDynamicAopProxy(config);
 			}
+			// 如果不是接口，也不是JDK 动态代理，则使用CGLIB 动态代理，课根据当前是否实现接口类来判断哪种代理模式。
 			return new ObjenesisCglibAopProxy(config);
 		}
 		else {

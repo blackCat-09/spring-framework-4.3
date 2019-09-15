@@ -134,56 +134,60 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	 */
 	public static final String INFER_METHOD = "(inferred)";
 
-
+	// Bean 实例的class 类
 	private volatile Object beanClass;
-
+	// Bean 的作用域，默认为空，即默认为单例。
 	private String scope = SCOPE_DEFAULT;
-
+	// 设置抽象标志，用于对bean 描述信息的比较
 	private boolean abstractFlag = false;
-
+	// 是否懒加载，大多数用于容器启动时
 	private boolean lazyInit = false;
-
+	// 自动注入模式，默认为不自动注入
 	private int autowireMode = AUTOWIRE_NO;
-
+	// 依赖检测，当处理属性注入时，是否启动检测
 	private int dependencyCheck = DEPENDENCY_CHECK_NONE;
-
+	// 当前Bean，依赖Bean 名称，当获取Bean时，注册并且实例化这些Bean
 	private String[] dependsOn;
-
+	// 自动注入候选Bean，也就是说如果相同类型的Bean 有多个，则优先使用当前值为true，的Bean
 	private boolean autowireCandidate = true;
-
+	// 当类型相同，优先选取有此配置的Bean
 	private boolean primary = false;
-
+	// Bean 属性，Qualifier 注解执行函数map
 	private final Map<String, AutowireCandidateQualifier> qualifiers =
 			new LinkedHashMap<String, AutowireCandidateQualifier>(0);
-
+	// 如果BeanClass 的范围修饰符不是 public，并且设置这个值为false，则在创建实例时检查性保存
 	private boolean nonPublicAccessAllowed = true;
-
+	// 由于构造函数的参数可能有多个，所以在设置这个参数时，可以在构造函数解析时使用宽松模式
 	private boolean lenientConstructorResolution = true;
-
+	// 工厂Bean 的名称
 	private String factoryBeanName;
-
+	// 工厂方法的名称
 	private String factoryMethodName;
-
+	// 构造函数的参数值集合
 	private ConstructorArgumentValues constructorArgumentValues;
-
+	// 属性值对集合
 	private MutablePropertyValues propertyValues;
-
+	// 重写方法的设置集合
 	private MethodOverrides methodOverrides = new MethodOverrides();
-
+	// 初始化方法名，在初始化Bean 时调用该方法
 	private String initMethodName;
-
+	// 销毁bean 的方法名
 	private String destroyMethodName;
-
+	// 强制初始化，如果配置了初始化，并且这个参数被设置true，则抛出验证异常。
 	private boolean enforceInitMethod = true;
-
+	// 强制销毁，如果配置销毁方法，并且这个参数被设置true，则也会抛出验证异常
 	private boolean enforceDestroyMethod = true;
-
+	// 判断Bean 是否合成Bean，如果Bean 不是合成的bean，则会调用 instantiationAwareBeanPostProcessor。postProcessBeforeInstantiation 方法。
 	private boolean synthetic = false;
-
+	/**
+	 * Bean 角色分三种，ROLE_APPLICATION = 0, 全局角色，面向spring 用户，用户自定义Bean一般都使用全局角色
+	 * ROLE_SUPPORT = 1 特殊场景用
+	 * ROLE_INFRASTRUCTURE = 2 内部使用
+	 */
 	private int role = BeanDefinition.ROLE_APPLICATION;
-
+	// 描述
 	private String description;
-
+	// 来源
 	private Resource resource;
 
 

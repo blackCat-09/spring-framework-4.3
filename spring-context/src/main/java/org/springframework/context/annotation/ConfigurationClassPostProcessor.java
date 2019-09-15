@@ -224,13 +224,17 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + registry);
 		}
 		this.registriesPostProcessed.add(registryId);
-
+		/**
+		 * 主要处理Bean 描述信息实体的排序，以及configuration Bean 的解析和读取。
+		 * [ConfigurationClassParser.doProcessConfigurationClass] 怎么解析Bean的、解析的属性。
+		 */
 		processConfigBeanDefinitions(registry);
 	}
 
 	/**
 	 * Prepare the Configuration classes for servicing bean requests at runtime
 	 * by replacing them with CGLIB-enhanced subclasses.
+	 * 实现 `BeanFactoryPostProcessor` 用于自定义修改Spring 上下文Bean 定义信息
 	 */
 	@Override
 	public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) {
@@ -243,9 +247,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		if (!this.registriesPostProcessed.contains(factoryId)) {
 			// BeanDefinitionRegistryPostProcessor hook apparently not supported...
 			// Simply call processConfigurationClasses lazily at this point then.
+			// [processConfigBeanDefinitions]
 			processConfigBeanDefinitions((BeanDefinitionRegistry) beanFactory);
 		}
-
+		// 如果包含 configuration class 的Bean 配置，则使用CGLIB 代理生成【enhanceConfigurationClasses】
 		enhanceConfigurationClasses(beanFactory);
 		beanFactory.addBeanPostProcessor(new ImportAwareBeanPostProcessor(beanFactory));
 	}
@@ -253,6 +258,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	/**
 	 * Build and validate a configuration model based on the registry of
 	 * {@link Configuration} classes.
+	 * [processConfigBeanDefinitions]
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<BeanDefinitionHolder>();
@@ -305,6 +311,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<BeanDefinitionHolder>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<ConfigurationClass>(configCandidates.size());
 		do {
+			// [ConfigurationClassParser.doProcessConfigurationClass] 解析Bean 的属性。
 			parser.parse(candidates);
 			parser.validate();
 
@@ -317,6 +324,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
+			// [ConfigurationClassBeanDefinitionReader.loadBeanDefinitions] 解析这些Bean 的定义信息。
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
@@ -361,6 +369,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * @see ConfigurationClassEnhancer
 	 */
 	public void enhanceConfigurationClasses(ConfigurableListableBeanFactory beanFactory) {
+		/*
+		 * 获取当前Bean 工厂中所有配置爱的Bean 描述信息
+		 * 如果Bean 的名称为configurationClassPostProcessor.class 并且 configurationClass 的值为full,则把它们的beanClass 放入CGLIB 代理生成class 中。
+		 */
 		Map<String, AbstractBeanDefinition> configBeanDefs = new LinkedHashMap<String, AbstractBeanDefinition>();
 		for (String beanName : beanFactory.getBeanDefinitionNames()) {
 			BeanDefinition beanDef = beanFactory.getBeanDefinition(beanName);
@@ -390,6 +402,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			beanDef.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
 			try {
 				// Set enhanced subclass of the user-specified bean class
+				// 生成CGLIB 代理类
+				/**
+				 * 为什么使用CGLIB代理,是因为它带有configuration 注解类。本身也是一个bean，不可能使用这个bean的class，所以只能使用CGLIB 代理生成一个新的class
+				 */
 				Class<?> configClass = beanDef.resolveBeanClass(this.beanClassLoader);
 				Class<?> enhancedClass = enhancer.enhance(configClass, this.beanClassLoader);
 				if (configClass != enhancedClass) {

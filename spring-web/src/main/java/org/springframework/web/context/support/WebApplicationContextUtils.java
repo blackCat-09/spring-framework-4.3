@@ -174,8 +174,14 @@ public abstract class WebApplicationContextUtils {
 	 * with the given BeanFactory, as used by the WebApplicationContext.
 	 * @param beanFactory the BeanFactory to configure
 	 * @param sc the ServletContext that we're running within
+	 * 注册Web 应用的Bean 作用范围
 	 */
 	public static void registerWebApplicationScopes(ConfigurableListableBeanFactory beanFactory, ServletContext sc) {
+		/**
+		 * 在Web 环境下有很多特定的生命周期，例如，session、request、globalsession, 所以Spring 在处理时为
+		 * 各种不同的对象都设置特有的Web 环境声明周期
+		 */
+		// registerScope 是直接调用 AbstractBeanFactroy抽象类的 registerScope 方法，来进行注册作用域
 		beanFactory.registerScope(WebApplicationContext.SCOPE_REQUEST, new RequestScope());
 		beanFactory.registerScope(WebApplicationContext.SCOPE_SESSION, new SessionScope(false));
 		beanFactory.registerScope(WebApplicationContext.SCOPE_GLOBAL_SESSION, new SessionScope(true));
@@ -185,12 +191,14 @@ public abstract class WebApplicationContextUtils {
 			// Register as ServletContext attribute, for ContextCleanupListener to detect it.
 			sc.setAttribute(ServletContextScope.class.getName(), appScope);
 		}
-
+		// 为Web 环境的特定对象设置工厂Bean，用来生成ServletRequest、ServletResponse、HttpSession、WebRequest 对象。
+		// 使用 DefaultListableBeanFactory类中 registerResolvableDependency 方法。
 		beanFactory.registerResolvableDependency(ServletRequest.class, new RequestObjectFactory());
 		beanFactory.registerResolvableDependency(ServletResponse.class, new ResponseObjectFactory());
 		beanFactory.registerResolvableDependency(HttpSession.class, new SessionObjectFactory());
 		beanFactory.registerResolvableDependency(WebRequest.class, new WebRequestObjectFactory());
 		if (jsfPresent) {
+			// 避免 jsf 依赖
 			FacesDependencyRegistrar.registerFacesDependencies(beanFactory);
 		}
 	}

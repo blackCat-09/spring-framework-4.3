@@ -228,6 +228,10 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 	@Override
 	protected boolean isExistingTransaction(Object transaction) {
+		/**
+		 * 判断已经存在事务的标志就是存在 ConnectionHolder 并且设置事务活跃性标志位 true
+		 * 所以我们能理解为什么开启新
+		 */
 		DataSourceTransactionObject txObject = (DataSourceTransactionObject) transaction;
 		return (txObject.hasConnectionHolder() && txObject.getConnectionHolder().isTransactionActive());
 	}
@@ -241,24 +245,31 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		Connection con = null;
 
 		try {
+			// 如果在当前事务对象中 ConnectionHolder 为null，也就是说还没有放置连接。获取事务同步
 			if (!txObject.hasConnectionHolder() ||
 					txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
+				// 则从连接池中获取连接
 				Connection newCon = this.dataSource.getConnection();
 				if (logger.isDebugEnabled()) {
 					logger.debug("Acquired Connection [" + newCon + "] for JDBC transaction");
 				}
+				// 放置当前含有 Connection 的 ConnectionHolder 到事务对象中，并且设置连接标志位的新的数据库连接
 				txObject.setConnectionHolder(new ConnectionHolder(newCon), true);
 			}
-
+			// 设置当前事务为同步事务
 			txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
 			con = txObject.getConnectionHolder().getConnection();
-
+			// 将事务的隔离级别设置到事务对象中
 			Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
 			txObject.setPreviousIsolationLevel(previousIsolationLevel);
 
 			// Switch to manual commit if necessary. This is very expensive in some JDBC drivers,
 			// so we don't want to do it unnecessarily (for example if we've explicitly
 			// configured the connection pool to set it already).
+			/**
+			 * 如果当前连接的自动提交属性为true，则设置为false。只有修改连接的自动提交属性，才能把事务提交由Spring 管理
+			 * 从而管理Spring 事务传播特性的机制功能。
+			 */
 			if (con.getAutoCommit()) {
 				txObject.setMustRestoreAutoCommit(true);
 				if (logger.isDebugEnabled()) {
@@ -268,20 +279,23 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			}
 
 			prepareTransactionalConnection(con, definition);
+			// 设置事务已经启动的标志
 			txObject.getConnectionHolder().setTransactionActive(true);
-
+			// 获取事务属性中的超时时间设置，并且将其设置到事务对象的 ConnectionHolder 中
 			int timeout = determineTimeout(definition);
 			if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
 				txObject.getConnectionHolder().setTimeoutInSeconds(timeout);
 			}
 
 			// Bind the connection holder to the thread.
+			// 把当前数据库连接的相关属性设置到ThreadLocal 中
 			if (txObject.isNewConnectionHolder()) {
 				TransactionSynchronizationManager.bindResource(getDataSource(), txObject.getConnectionHolder());
 			}
 		}
 
 		catch (Throwable ex) {
+			// 如果当前连接是刚从连接池中获取的，则释放当前连接。并且清空 connectionHolder
 			if (txObject.isNewConnectionHolder()) {
 				DataSourceUtils.releaseConnection(con, this.dataSource);
 				txObject.setConnectionHolder(null, false);

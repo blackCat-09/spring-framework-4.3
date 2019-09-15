@@ -79,8 +79,11 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * e.g. {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... annotatedClasses) {
+		// 实例化注解Bean 定义读取实例，并按照class 路径扫描Bean 实例
 		this();
+		// 注册当前这个class 数组，解析并添加这个bean，的描述到BeanFactory中
 		register(annotatedClasses);
+		// 启动Spring 容器
 		refresh();
 	}
 

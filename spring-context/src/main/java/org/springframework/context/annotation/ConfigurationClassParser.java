@@ -244,6 +244,7 @@ class ConfigurationClassParser {
 		// Recursively process the configuration class and its superclass hierarchy.
 		SourceClass sourceClass = asSourceClass(configClass);
 		do {
+			// [doProcessConfigurationClass] 解析Bean的属性。
 			sourceClass = doProcessConfigurationClass(configClass, sourceClass);
 		}
 		while (sourceClass != null);
@@ -258,14 +259,20 @@ class ConfigurationClassParser {
 	 * @param configClass the configuration class being build
 	 * @param sourceClass a source class
 	 * @return the superclass, or {@code null} if none found or previously processed
+	 * 解析Bean 的属性
 	 */
 	protected final SourceClass doProcessConfigurationClass(ConfigurationClass configClass, SourceClass sourceClass)
 			throws IOException {
 
 		// Recursively process any member (nested) classes first
+		// 先处理，其成员类，即它的内部类
 		processMemberClasses(configClass, sourceClass);
 
 		// Process any @PropertySource annotations
+		/**
+		 * 如果在这个注解meta 中含有 propertySource 循环处理，则加载这些配置文件，SpringBoot 在使用配置文件配置注解就用到这部分内容
+		 * 核心处理类[ConfigurationPropertiesBindingPostProcessor] 是一个Bean 后置处理器
+		 */
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
@@ -279,16 +286,22 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
+		// 扫描注解配置并加载
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				// 解析注解的内容，并加载扫描中的Bean 的描述信息实体。
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
+					/**
+					 * 检测并处理 config class 定义的扫描注解定义，并且递归处理
+					 * 因为有可能被扫描到的类也配置 configurationClass
+					 */
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {
 						bdCand = holder.getBeanDefinition();
@@ -301,9 +314,11 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
+		// 处理 import 注解
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
+		// 处理 importResource 注解
 		if (sourceClass.getMetadata().isAnnotated(ImportResource.class.getName())) {
 			AnnotationAttributes importResource =
 					AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
@@ -316,15 +331,18 @@ class ConfigurationClassParser {
 		}
 
 		// Process individual @Bean methods
+		// 在处理方法中，含义@Bean 注解
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
 			configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));
 		}
 
 		// Process default methods on interfaces
+		// 处理接口中的默认方法，兼容JDK 8 以上版本，JDK8之前不支持在接口中有非抽象方法。
 		processInterfaces(configClass, sourceClass);
 
 		// Process superclass, if any
+		// 处理父类部分
 		if (sourceClass.getMetadata().hasSuperClass()) {
 			String superclass = sourceClass.getMetadata().getSuperClassName();
 			if (!superclass.startsWith("java") && !this.knownSuperclasses.containsKey(superclass)) {
@@ -608,6 +626,7 @@ class ConfigurationClassParser {
 						// process it as an @Configuration class
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
+						// [processConfigurationClass]
 						processConfigurationClass(candidate.asConfigClass(configClass));
 					}
 				}

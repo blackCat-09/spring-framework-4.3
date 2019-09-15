@@ -269,9 +269,11 @@ public abstract class AopUtils {
 	 * @param hasIntroductions whether or not the advisor chain for this bean includes
 	 * any introductions
 	 * @return whether the pointcut can apply on any method
+	 * 匹配算法，在Advisor 是 IntroductionAdvisor 和 PointcutAdvisor 两种类型时不同的匹配策略
 	 */
 	public static boolean canApply(Advisor advisor, Class<?> targetClass, boolean hasIntroductions) {
 		if (advisor instanceof IntroductionAdvisor) {
+			// 如果当前Advisor 是 IntroductionAdvisor 类型直接使用 classFilter 匹配类，说明这种Advisor 的作用范围很大，以类为范围
 			return ((IntroductionAdvisor) advisor).getClassFilter().matches(targetClass);
 		}
 		else if (advisor instanceof PointcutAdvisor) {
@@ -298,6 +300,11 @@ public abstract class AopUtils {
 		}
 		List<Advisor> eligibleAdvisors = new LinkedList<Advisor>();
 		for (Advisor candidate : candidateAdvisors) {
+			/**
+			 * 如果当前Advisor 是 IntroductionAdvisor 类型的并且目标是Bean 的Advisor，则将当前Advisor 添加到符合目标Bean的 Advisor集合中
+			 * 如果当前Advisor 是IntroductionAdvisor 类型则优先添加，保证这种类型的Advisor 优先执行。
+			 * [canApply]
+			 */
 			if (candidate instanceof IntroductionAdvisor && canApply(candidate, clazz)) {
 				eligibleAdvisors.add(candidate);
 			}

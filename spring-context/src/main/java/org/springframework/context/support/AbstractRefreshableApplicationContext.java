@@ -116,16 +116,24 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * bean factory, shutting down the previous bean factory (if any) and
 	 * initializing a fresh bean factory for the next phase of the context's lifecycle.
 	 */
+	/**
+	 * SpringWeb 容器的核心基类。在Spring AbstractApplicationContext 启动时调用 refreshBeanFactory
+	 */
 	@Override
 	protected final void refreshBeanFactory() throws BeansException {
+		// 如果当前已经存在工厂，则销毁工厂中的Bean，关闭当前BeanFactory
 		if (hasBeanFactory()) {
 			destroyBeans();
 			closeBeanFactory();
 		}
 		try {
+			// 创建工厂Bean
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
 			beanFactory.setSerializationId(getId());
+			// 设置当前工厂Bean 是否允许Bean 定义重写覆盖，设置当前BeanFactory 是否允许Bean 循环引用
 			customizeBeanFactory(beanFactory);
+			// 按照指定的配置把定义Bean 定义加载到Bean 工厂中。[loadBeanDefinitions] (加载解析Bean定义信息)
+			// [loadBeanDefinitions] XmlWebApplicationContext
 			loadBeanDefinitions(beanFactory);
 			synchronized (this.beanFactoryMonitor) {
 				this.beanFactory = beanFactory;

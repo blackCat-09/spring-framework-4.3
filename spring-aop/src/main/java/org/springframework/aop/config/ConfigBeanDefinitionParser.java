@@ -95,24 +95,34 @@ class ConfigBeanDefinitionParser implements BeanDefinitionParser {
 	private ParseState parseState = new ParseState();
 
 
+	/**
+	 * 该类的属性定义可以看出其负责解析的那些标签
+	 */
 	@Override
 	public BeanDefinition parse(Element element, ParserContext parserContext) {
+		// 设置元素组件描述信息
 		CompositeComponentDefinition compositeDef =
 				new CompositeComponentDefinition(element.getTagName(), parserContext.extractSource(element));
 		parserContext.pushContainingComponent(compositeDef);
-
+		/**
+		 * 配置代理自动创建器[configureAutoProxyCreator]
+		 * 将 internalAutoProxyCreator 注册到 BeanFactory 中
+		 */
 		configureAutoProxyCreator(parserContext, element);
-
+		// 解析孩子节点，并完成bean 描述信息的注册
 		List<Element> childElts = DomUtils.getChildElements(element);
 		for (Element elt: childElts) {
 			String localName = parserContext.getDelegate().getLocalName(elt);
 			if (POINTCUT.equals(localName)) {
+				// 解析 pointcut 标签并完成注册
 				parsePointcut(elt, parserContext);
 			}
 			else if (ADVISOR.equals(localName)) {
+				// 解析 advisor 标签并完成注册
 				parseAdvisor(elt, parserContext);
 			}
 			else if (ASPECT.equals(localName)) {
+				// 解析 aspace 标签并完成注册
 				parseAspect(elt, parserContext);
 			}
 		}
@@ -128,6 +138,7 @@ class ConfigBeanDefinitionParser implements BeanDefinitionParser {
 	 * @see AopNamespaceUtils
 	 */
 	private void configureAutoProxyCreator(ParserContext parserContext, Element element) {
+		// [registerAspectJAutoProxyCreatorIfNecessary]
 		AopNamespaceUtils.registerAspectJAutoProxyCreatorIfNecessary(parserContext, element);
 	}
 
