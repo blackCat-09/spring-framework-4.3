@@ -324,7 +324,7 @@ public class ProxyFactoryBean extends ProxyCreatorSupport
 			// Initialize the shared singleton instance.
 			// 设置冻结标志，一旦冻结，则不能改变 Advisor
 			super.setFrozen(this.freezeProxy);
-			// 创建并获取代理实例。
+			// 创建并获取代理实例。[createAopProxy]
 			this.singletonInstance = getProxy(createAopProxy());
 		}
 		return this.singletonInstance;
