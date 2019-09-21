@@ -131,6 +131,7 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 			DefaultListableBeanFactory beanFactory = createBeanFactory();
 			beanFactory.setSerializationId(getId());
 			// 设置当前工厂Bean 是否允许Bean 定义重写覆盖，设置当前BeanFactory 是否允许Bean 循环引用
+			// [customizeBeanFactory] 定时BeanFactory
 			customizeBeanFactory(beanFactory);
 			// 按照指定的配置把定义Bean 定义加载到Bean 工厂中。[loadBeanDefinitions] (加载解析Bean定义信息)
 			// [loadBeanDefinitions] XmlWebApplicationContext
@@ -223,9 +224,11 @@ public abstract class AbstractRefreshableApplicationContext extends AbstractAppl
 	 * @see DefaultListableBeanFactory#setAllowEagerClassLoading
 	 */
 	protected void customizeBeanFactory(DefaultListableBeanFactory beanFactory) {
+		// 此属性的含义，是否允许覆盖同名称的不同定义的对象
 		if (this.allowBeanDefinitionOverriding != null) {
 			beanFactory.setAllowBeanDefinitionOverriding(this.allowBeanDefinitionOverriding);
 		}
+		// 此属性的含义，是否允许bean 之间存在循环依赖
 		if (this.allowCircularReferences != null) {
 			beanFactory.setAllowCircularReferences(this.allowCircularReferences);
 		}

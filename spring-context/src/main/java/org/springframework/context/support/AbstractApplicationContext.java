@@ -517,12 +517,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			 * 调用创建子类的创建工厂方法和刷新工厂方法
 			 * 上面提到父子容器就用了。它的子类 abstractRefreshableApplicationContext 来创建
 			 * beanFactory.xml 配置文件的读取也就是在此加载的
+			 *
 			 * [obtainFreshBeanFactory]
 			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
 			// 初始化和设置BeanFactory 的初始化参数
+			// [prepareBeanFactory](Spring 已经完成对配置的解析,功能扩展也由此展开)
 			prepareBeanFactory(beanFactory);
 
 			try {
@@ -620,10 +622,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
+		// 留给子类覆盖
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
+		// 验证需要的属性文件是否都已经放入环境中
 		getEnvironment().validateRequiredProperties();
 
 		// Allow for the collection of early ApplicationEvents,
@@ -635,6 +639,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Replace any stub property sources with actual instances.
 	 * @see org.springframework.core.env.PropertySource.StubPropertySource
 	 * @see org.springframework.web.context.support.WebApplicationContextUtils#initServletPropertySources
+	 *
+	 * 	留给子类覆盖
 	 */
 	protected void initPropertySources() {
 		// For subclasses: do nothing by default.
@@ -650,6 +656,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		// SpringWeb 核心基类，刷新BeanFactory (AbstractRefreshableApplicationContext)
 		// [refreshBeanFactory]
 		refreshBeanFactory();
+		// 返回当前实体的BeanFactory 属性
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
 		if (logger.isDebugEnabled()) {
 			logger.debug("Bean factory for " + getDisplayName() + ": " + beanFactory);
@@ -664,12 +671,17 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
+		// 设置BeanFactory 的classLoader 为当前context 的classLoader
 		beanFactory.setBeanClassLoader(getClassLoader());
+		// 设置BeanFactory 表达式语言处理器，默认使用 #{bean.class} 形式相关属性
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+		// 为BeanFactory 增加一个默认 propertyEditor 主要对Bean 的属性设置管理工具
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		// 添加 BeanPostProcessor
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+		// 设置几个忽略自动装配的接口
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -679,12 +691,14 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// BeanFactory interface not registered as resolvable type in a plain factory.
 		// MessageSource registered (and found for autowiring) as a bean.
+		// 设置几个自动装配的特殊规则
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
 		// Register early post-processor for detecting inner beans as ApplicationListeners.
+		// 增加对 AspectJ 的支持
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
 		// Detect a LoadTimeWeaver and prepare for weaving, if found.
@@ -695,6 +709,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Register default environment beans.
+		// 添加默认的系统环境Bean。
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
 		}
