@@ -113,15 +113,19 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 	@Override
 	public NamespaceHandler resolve(String namespaceUri) {
 		// 获取META-INF/spring.handlers 配置文件中的值，并将其放在map中[getHandlerMappings]
+		// 获取对应 namespaceHandler 处理类
 		Map<String, Object> handlerMappings = getHandlerMappings();
+		// 根据命名空间找到对应的信息
 		Object handlerOrClassName = handlerMappings.get(namespaceUri);
 		if (handlerOrClassName == null) {
 			return null;
 		}
 		else if (handlerOrClassName instanceof NamespaceHandler) {
+			// 已经做过解析的情况，直接从缓存读取
 			return (NamespaceHandler) handlerOrClassName;
 		}
 		else {
+			// 没有做过解析，则返回是类的路径。
 			String className = (String) handlerOrClassName;
 			try {
 				Class<?> handlerClass = ClassUtils.forName(className, this.classLoader);
@@ -132,6 +136,7 @@ public class DefaultNamespaceHandlerResolver implements NamespaceHandlerResolver
 				NamespaceHandler namespaceHandler = (NamespaceHandler) BeanUtils.instantiateClass(handlerClass);
 				// 实例化自定义Handler ，并且调用init 方法。
 				namespaceHandler.init();
+				// 记录在缓存
 				handlerMappings.put(namespaceUri, namespaceHandler);
 				return namespaceHandler;
 			}

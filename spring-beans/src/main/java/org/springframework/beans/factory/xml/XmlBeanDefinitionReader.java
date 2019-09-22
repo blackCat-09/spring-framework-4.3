@@ -333,6 +333,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 				if (encodedResource.getEncoding() != null) {
 					inputSource.setEncoding(encodedResource.getEncoding());
 				}
+				// [doLoadBeanDefinitions]
 				return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 			}
 			finally {
@@ -389,7 +390,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 		try {
 			Document doc = doLoadDocument(inputSource, resource);
-			// [registerBeanDefinitions]
+			// [registerBeanDefinitions] 标签解析
 			return registerBeanDefinitions(doc, resource);
 		}
 		catch (BeanDefinitionStoreException ex) {
@@ -511,6 +512,8 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 		/*
 		 * 使用 documentReader 注册当前文档中的Bean
 		 * registerBeanDefinitions 注册Bean（最终调用 AbstractBeanDefinitionParser.parse() 构建BeanDefinition）
+		 *
+		 * [registerBeanDefinitions ] Spring 默然标签的解析
 		 * [createReaderContext] 解析Bean
 		 */
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
